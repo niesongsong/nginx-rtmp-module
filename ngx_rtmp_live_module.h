@@ -14,6 +14,7 @@
 #include "ngx_rtmp_cmd_module.h"
 #include "ngx_rtmp_bandwidth.h"
 #include "ngx_rtmp_streams.h"
+#include "ngx_rtmp_gop_module.h"
 
 
 typedef struct ngx_rtmp_live_ctx_s ngx_rtmp_live_ctx_t;

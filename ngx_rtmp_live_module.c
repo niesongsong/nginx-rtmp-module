@@ -806,6 +806,9 @@ ngx_rtmp_live_av(ngx_rtmp_session_t *s, ngx_rtmp_header_t *h,
 
     ngx_rtmp_prepare_message(s, &ch, &lh, rpkt);
 
+    /* ok, cache */
+    (void) ngx_rtmp_gop_cache_frame(s, &ch, &lh, in, rpkt);
+
     codec_ctx = ngx_rtmp_get_module_ctx(s, ngx_rtmp_codec_module);
 
     if (codec_ctx) {
