@@ -18,13 +18,15 @@ typedef struct {
 
     uint8_t                 avc_header:1;
     uint8_t                 aac_header:1;
+    uint32_t                timestamp;
+
     ngx_rtmp_session_t     *session;
 } ngx_rtmp_gop_ctx_t;
 
 
 typedef struct {
-    ngx_flag_t             gop_cache;
-    ngx_uint_t             gop_cache_max_frame_cnt;
+    ngx_flag_t             cache;
+    ngx_uint_t             max_frames;
 } ngx_rtmp_gop_app_conf_t;
 
 
@@ -67,14 +69,14 @@ static ngx_command_t  ngx_rtmp_gop_commands[] = {
       NGX_RTMP_MAIN_CONF|NGX_RTMP_SRV_CONF|NGX_RTMP_APP_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_flag_slot,
       NGX_RTMP_APP_CONF_OFFSET,
-      offsetof(ngx_rtmp_gop_app_conf_t, gop_cache),
+      offsetof(ngx_rtmp_gop_app_conf_t, cache),
       NULL },
 
-    { ngx_string("gop_cache_max_frame_cnt"),
+    { ngx_string("gop_cache_max_frames"),
       NGX_RTMP_MAIN_CONF|NGX_RTMP_SRV_CONF|NGX_RTMP_APP_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,
       NGX_RTMP_APP_CONF_OFFSET,
-      offsetof(ngx_rtmp_gop_app_conf_t, gop_cache_max_frame_cnt),
+      offsetof(ngx_rtmp_gop_app_conf_t, max_frames),
       NULL },
 
     ngx_null_command
@@ -116,8 +118,8 @@ ngx_rtmp_gop_create_app_conf(ngx_conf_t *cf)
     if (gacf == NULL) {
         return NULL;
     }
-    gacf->gop_cache = NGX_CONF_UNSET;
-    gacf->gop_cache_max_frame_cnt = NGX_CONF_UNSET_UINT;
+    gacf->cache = NGX_CONF_UNSET;
+    gacf->max_frames = NGX_CONF_UNSET_UINT;
 
     return gacf;
 }
@@ -129,9 +131,8 @@ ngx_rtmp_gop_merge_app_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_rtmp_gop_app_conf_t *prev = parent;
     ngx_rtmp_gop_app_conf_t *conf = child;
 
-    ngx_conf_merge_value(conf->gop_cache, prev->gop_cache, 0);
-    ngx_conf_merge_uint_value(conf->gop_cache_max_frame_cnt, 
-        prev->gop_cache_max_frame_cnt, 512);
+    ngx_conf_merge_value(conf->cache, prev->cache, 0);
+    ngx_conf_merge_uint_value(conf->max_frames, prev->max_frames, 512);
 
     return NGX_CONF_OK;
 }
@@ -182,7 +183,7 @@ ngx_rtmp_gop_publish(ngx_rtmp_session_t *s, ngx_rtmp_publish_t *v)
     gacf = ngx_rtmp_get_module_app_conf(s, ngx_rtmp_gop_module);
     lacf = ngx_rtmp_get_module_app_conf(s, ngx_rtmp_live_module);
 
-    if (lacf == NULL || !lacf->live || gacf == NULL || !gacf->gop_cache) {
+    if (lacf == NULL || !lacf->live || gacf == NULL || !gacf->cache) {
         goto next;
     }
 
@@ -199,8 +200,8 @@ ngx_rtmp_gop_publish(ngx_rtmp_session_t *s, ngx_rtmp_publish_t *v)
             goto next;
         }
 
-        rc = ngx_array_init(&ctx->frames, s->connection->pool, 
-            gacf->gop_cache_max_frame_cnt, sizeof(ngx_rtmp_cache_frame_t));
+        rc = ngx_array_init(&ctx->frames, s->connection->pool, gacf->max_frames,
+                            sizeof(ngx_rtmp_cache_frame_t));
 
         if (rc != NGX_OK) {
             ngx_log_error(NGX_LOG_ERR, s->connection->log, 0,
@@ -242,7 +243,7 @@ ngx_rtmp_gop_play(ngx_rtmp_session_t *s, ngx_rtmp_play_t *v)
     gacf = ngx_rtmp_get_module_app_conf(s, ngx_rtmp_gop_module);
     lacf = ngx_rtmp_get_module_app_conf(s, ngx_rtmp_live_module);
 
-    if (lacf == NULL || !lacf->live || gacf == NULL || !gacf->gop_cache) {
+    if (lacf == NULL || !lacf->live || gacf == NULL || !gacf->cache) {
         goto next;
     }
 
@@ -420,7 +421,7 @@ ngx_rtmp_gop_cache_frame(ngx_rtmp_session_t *s, ngx_rtmp_header_t *ch,
     gacf = ngx_rtmp_get_module_app_conf(s, ngx_rtmp_gop_module);
     lacf = ngx_rtmp_get_module_app_conf(s, ngx_rtmp_live_module);
 
-    if (gacf == NULL || !gacf->gop_cache || lacf == NULL || !lacf->live) {
+    if (gacf == NULL || !gacf->cache || lacf == NULL || !lacf->live) {
         return NGX_OK;
     }
 
@@ -512,7 +513,7 @@ ngx_rtmp_gop_cache_frame(ngx_rtmp_session_t *s, ngx_rtmp_header_t *ch,
     }
 
     /* cache data */
-    if (ctx->frames.nelts < gacf->gop_cache_max_frame_cnt) {
+    if (ctx->frames.nelts < gacf->max_frames) {
 
         ngx_rtmp_gop_append_frame(ctx, pkt, ch, prio);
         

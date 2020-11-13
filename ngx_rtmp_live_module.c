@@ -9,6 +9,7 @@
 #include "ngx_rtmp_live_module.h"
 #include "ngx_rtmp_cmd_module.h"
 #include "ngx_rtmp_codec_module.h"
+#include "ngx_rtmp_gop_module.h"
 
 
 static ngx_rtmp_publish_pt              next_publish;
