@@ -28,6 +28,7 @@ ngx_rtmp_alloc_shared_buf(ngx_rtmp_core_srv_conf_t *cscf)
         p = ngx_pcalloc(cscf->pool, NGX_RTMP_REFCOUNT_BYTES
                 + sizeof(ngx_chain_t)
                 + sizeof(ngx_buf_t)
+                + sizeof(ngx_rtmp_header_t)
                 + size);
         if (p == NULL) {
             return NULL;
@@ -40,6 +41,10 @@ ngx_rtmp_alloc_shared_buf(ngx_rtmp_core_srv_conf_t *cscf)
         out->buf = (ngx_buf_t *)p;
 
         p += sizeof(ngx_buf_t);
+        out->buf->tag = p;
+
+        p += sizeof(ngx_rtmp_header_t);
+        
         out->buf->start = p;
         out->buf->end = p + size;
     }

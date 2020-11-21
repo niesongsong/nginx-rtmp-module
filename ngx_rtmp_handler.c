@@ -6,6 +6,7 @@
 
 #include <ngx_config.h>
 #include <ngx_core.h>
+#include "ngx_http.h"
 #include "ngx_rtmp.h"
 #include "ngx_rtmp_amf.h"
 
@@ -575,6 +576,7 @@ ngx_rtmp_prepare_message(ngx_rtmp_session_t *s, ngx_rtmp_header_t *h,
     ngx_rtmp_core_srv_conf_t   *cscf;
     uint8_t                     fmt;
     ngx_connection_t           *c;
+    ngx_rtmp_header_t          *hdr;
 
     c = s->connection;
     cscf = ngx_rtmp_get_module_srv_conf(s, ngx_rtmp_core_module);
@@ -622,6 +624,10 @@ ngx_rtmp_prepare_message(ngx_rtmp_session_t *s, ngx_rtmp_header_t *h,
             ngx_rtmp_message_type(h->type), (int)h->type, (int)fmt,
             h->csid, timestamp, mlen, h->msid, nbufs);
 
+    hdr = (ngx_rtmp_header_t *)out->buf->tag;
+    *hdr = *h;
+    hdr->mlen = mlen;
+    
     ext_timestamp = 0;
     if (timestamp >= 0x00ffffff) {
         ext_timestamp = timestamp;
@@ -741,7 +747,12 @@ ngx_rtmp_send_message(ngx_rtmp_session_t *s, ngx_chain_t *out,
     }
 
     if (!s->connection->write->active) {
-        ngx_rtmp_send(s->connection->write);
+        if (s->signature == NGX_HTTP_MODULE && s->connection->write->handler) {
+            s->connection->write->handler(s->connection->write);
+        } else {
+            ngx_rtmp_send(s->connection->write);
+        }
+
         /*return ngx_add_event(s->connection->write, NGX_WRITE_EVENT, NGX_CLEAR_EVENT);*/
     }
 

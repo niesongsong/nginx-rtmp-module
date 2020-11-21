@@ -22,6 +22,7 @@ typedef struct {
     ngx_str_t                       swf_url;
     ngx_str_t                       flash_ver;
     ngx_str_t                       play_path;
+    ngx_int_t                       flv;
     ngx_int_t                       live;
     ngx_int_t                       start;
     ngx_int_t                       stop;

@@ -504,7 +504,11 @@ ngx_rtmp_relay_create_connection(ngx_rtmp_conf_ctx_t *cctx, ngx_str_t* name,
     (void) ngx_atomic_fetch_add(ngx_stat_active, 1);
 #endif
 
-    ngx_rtmp_client_handshake(rs, 1);
+    if (target->flv) {
+        ngx_rtmp_client_http_flv_live_handshake(rs);
+    } else {
+        ngx_rtmp_client_handshake(rs, 1);
+    }
     return rctx;
 
 clear:
@@ -1467,7 +1471,14 @@ ngx_rtmp_relay_push_pull(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     u->uri_part = 1;
     u->url = value[1];
 
-    if (ngx_strncasecmp(u->url.data, (u_char *) "rtmp://", 7) == 0) {
+    if (ngx_strncasecmp(u->url.data + 1, (u_char *) "rtmp://", 7) == 0
+    || ngx_strncasecmp(u->url.data, (u_char *) "http://", 7) == 0) 
+    {
+        if (u->url.data[0] == 'h') {
+            u->default_port = 80;
+            target->flv = 1;
+        }
+
         u->url.data += 7;
         u->url.len  -= 7;
     }
