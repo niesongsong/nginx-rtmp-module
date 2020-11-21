@@ -600,6 +600,7 @@ ngx_rtmp_flv_live_send(ngx_event_t *wev)
     ngx_http_request_t         *r;
     ngx_rtmp_flv_live_ctx_t    *ctx;
     ngx_chain_t                *cl;
+    ngx_int_t                  *n;
 
     c = wev->data;
     r = c->data;
@@ -660,7 +661,11 @@ ngx_rtmp_flv_live_send(ngx_event_t *wev)
         return;
     }
 
-    ngx_rtmp_flv_live_send_cycle(s);
+    n = ngx_rtmp_flv_live_send_cycle(s);
+    if (n != NGX_OK && n != NGX_AGAIN) {
+        ngx_rtmp_finalize_session(s);
+        return;
+    }
 
     if (wev->active) {
         ngx_del_event(wev, NGX_WRITE_EVENT, 0);
